@@ -54,16 +54,6 @@ export interface QueryInfo {
   cancel?: (() => void);
 }
 
-const defaultQueryInfo = {
-  listeners: [],
-  invalidated: false,
-  document: null,
-  newData: null,
-  lastRequestId: null,
-  observableQuery: null,
-  subscriptions: [],
-};
-
 export interface QueryPromise {
   resolve: (result: ApolloQueryResult<any>) => void;
   reject: (error: Error) => void;
@@ -78,6 +68,7 @@ export class QueryManager<TStore> {
 
   private deduplicator: ApolloLink;
   private queryDeduplication: boolean;
+  private clientAwareness: Record<string, string> = {};
 
   private onBroadcast: () => void;
 
@@ -104,19 +95,21 @@ export class QueryManager<TStore> {
     store,
     onBroadcast = () => undefined,
     ssrMode = false,
+    clientAwareness = {},
   }: {
     link: ApolloLink;
     queryDeduplication?: boolean;
     store: DataStore<TStore>;
     onBroadcast?: () => void;
     ssrMode?: boolean;
+    clientAwareness?: Record<string, string>;
   }) {
     this.link = link;
     this.deduplicator = ApolloLink.from([new Deduplicator(), link]);
     this.queryDeduplication = queryDeduplication;
     this.dataStore = store;
     this.onBroadcast = onBroadcast;
-
+    this.clientAwareness = clientAwareness;
     this.scheduler = new QueryScheduler({ queryManager: this, ssrMode });
   }
 
@@ -614,18 +607,11 @@ export class QueryManager<TStore> {
           }
 
           if (observer.next) {
-            const isDifferentResult = !(
-              lastResult &&
-              resultFromStore &&
-              lastResult.networkStatus === resultFromStore.networkStatus &&
-              lastResult.stale === resultFromStore.stale &&
-              // We can do a strict equality check here because we include a `previousResult`
-              // with `readQueryFromStore`. So if the results are the same they will be
-              // referentially equal.
-              lastResult.data === resultFromStore.data
-            );
-
-            if (isDifferentResult || previouslyHadError) {
+            if (
+              previouslyHadError ||
+              !observableQuery ||
+              observableQuery.isDifferentFromLastResult(resultFromStore)
+            ) {
               try {
                 observer.next(resultFromStore);
               } catch (e) {
@@ -1231,7 +1217,17 @@ export class QueryManager<TStore> {
   }
 
   private getQuery(queryId: string) {
-    return this.queries.get(queryId) || { ...defaultQueryInfo };
+    return (
+      this.queries.get(queryId) || {
+        listeners: [],
+        invalidated: false,
+        document: null,
+        newData: null,
+        lastRequestId: null,
+        observableQuery: null,
+        subscriptions: [],
+      }
+    );
   }
 
   private setQuery(queryId: string, updater: (prev: QueryInfo) => any) {
@@ -1279,6 +1275,7 @@ export class QueryManager<TStore> {
             );
           }
         },
+        clientAwareness: this.clientAwareness,
       },
     };
   }
