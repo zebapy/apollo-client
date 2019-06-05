@@ -157,7 +157,7 @@ The render prop function that you pass to the `children` prop of `Mutation` is c
 **Mutate function:**
 
 <dl>
-  <dt>`mutate`: (options?: MutationOptions) => Promise<FetchResult></dt>
+  <dt>`mutate`: (options?: MutationOptions) => Promise&lt;FetchResult></dt>
   <dd>A function to trigger a mutation from your UI. You can optionally pass `variables`, `optimisticResponse`, `refetchQueries`, and `update` in as options, which will override any props passed to the `Mutation` component. The function returns a promise that fulfills with your mutation result.</dd>
 </dl>
 
