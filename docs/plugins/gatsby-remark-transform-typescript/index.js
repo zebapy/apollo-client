@@ -8,13 +8,13 @@ const babelOptions = {
       '@babel/typescript',
       {
         allExtensions: true,
-        isTSX: true
-      }
-    ]
-  ]
+        isTSX: true,
+      },
+    ],
+  ],
 };
 
-module.exports = ({markdownAST}) => {
+module.exports = ({ markdownAST }) => {
   visit(markdownAST, 'code', node => {
     if (ts.includes(node.lang)) {
       try {
