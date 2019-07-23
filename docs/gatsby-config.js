@@ -1,4 +1,4 @@
-const {defaultOptions} = require('gatsby-theme-apollo-docs');
+const { defaultOptions } = require('gatsby-theme-apollo-docs');
 
 module.exports = {
   pathPrefix: '/docs/react',
